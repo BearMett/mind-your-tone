@@ -1,6 +1,6 @@
 {
   "name": "mind-your-tone",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "displayName": "Mind Your Tone",
   "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
   "author": { "name": "BearMett" },

@@ -1,6 +1,6 @@
 {
   "name": "mind-your-tone",
-  "version": "0.2.0+codex.20260903022359",
+  "version": "0.2.1+codex.20260903022625",
   "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
   "author": {
     "name": "BearMett"
@@ -15,6 +15,7 @@
     "leaderboard"
   ],
   "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Mind Your Tone",
     "shortDescription": "See how rude your prompts sound.",

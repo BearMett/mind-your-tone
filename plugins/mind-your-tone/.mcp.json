@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mind_your_tone": {
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mind-your-tone.py", "mcp"]
+    }
+  }
+}
