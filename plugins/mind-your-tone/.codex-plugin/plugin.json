@@ -1,20 +1,32 @@
 {
   "name": "mind-your-tone",
-  "version": "0.1.0",
-  "description": "Scores prompt rudeness locally in Codex and optionally publishes masked results.",
-  "author": { "name": "BearMett" },
+  "version": "0.2.0+codex.20260903021022",
+  "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
+  "author": {
+    "name": "BearMett"
+  },
   "homepage": "https://mind-your-tone.vercel.app",
   "repository": "https://github.com/BearMett/mind-your-tone",
   "license": "MIT",
-  "keywords": ["prompt", "tone", "rudeness", "leaderboard"],
+  "keywords": [
+    "prompt",
+    "tone",
+    "rudeness",
+    "leaderboard"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Mind Your Tone",
     "shortDescription": "See how rude your prompts sound.",
-    "longDescription": "Scores each prompt from collaborator and impartial-judge perspectives, saves it locally, and publishes only after approval.",
+    "longDescription": "Shows a Tone Score, unlocks fixed titles for six tone styles, and publishes prompt cards on request.",
     "developerName": "BearMett",
     "category": "Developer Tools",
-    "capabilities": ["Local prompt scoring", "Optional public leaderboard"],
-    "defaultPrompt": ["Show my latest Mind Your Tone score."]
+    "capabilities": [
+      "Tone Score and title unlocks",
+      "Optional public prompt leaderboard"
+    ],
+    "defaultPrompt": [
+      "Show my latest Mind Your Tone score."
+    ]
   }
 }

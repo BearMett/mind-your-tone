@@ -1,8 +1,8 @@
 {
   "name": "mind-your-tone",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Mind Your Tone",
-  "description": "Scores prompt rudeness locally and optionally publishes masked results.",
+  "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
   "author": { "name": "BearMett" },
   "homepage": "https://mind-your-tone.vercel.app",
   "repository": "https://github.com/BearMett/mind-your-tone",

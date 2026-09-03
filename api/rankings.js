@@ -2,6 +2,13 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
 const POW_PREFIX = "0000";
+const TONES = new Set(["courteous", "direct", "impatient", "sarcastic", "disappointed", "explosive"]);
+const TITLES = new Set([
+  "매너 있는 동료", "정중한 독설가", "존댓말 암살자", "단도직입", "명령문 장인", "군더더기 파괴자",
+  "조금 급한 사람", "마감의 지배자", "당장 대령하라", "은근한 한마디", "칭찬인 줄 알았지?", "비꼼의 대가",
+  "작은 한숨", "한숨 수집가", "실망의 군주", "키보드 온도 상승", "키보드 화산", "프롬프트 폭군",
+  "극존칭 폭군", "인간 최종 보스", "톤 수집가", "육각형 폭군",
+]);
 let ready;
 
 function database() {
@@ -17,10 +24,14 @@ function database() {
         receiver_score smallint NOT NULL CHECK (receiver_score BETWEEN 0 AND 100),
         judge_score smallint NOT NULL CHECK (judge_score BETWEEN 0 AND 100),
         score smallint NOT NULL CHECK (score BETWEEN 0 AND 100),
+        tone varchar(24) NOT NULL,
+        title varchar(32) NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now()
       )
     `;
     await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS ip_hash text NOT NULL DEFAULT 'legacy'`;
+    await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS tone varchar(24) NOT NULL DEFAULT 'direct'`;
+    await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS title varchar(32) NOT NULL DEFAULT '단도직입'`;
     await sql`CREATE INDEX IF NOT EXISTS rankings_created_at_idx ON rankings (created_at)`;
   })();
   return { sql, ready };
@@ -43,15 +54,17 @@ export function maskText(value) {
 export function validateEntry(input) {
   const displayName = typeof input?.displayName === "string" ? input.displayName.trim() : "";
   const promptPreview = typeof input?.promptPreview === "string" ? maskText(input.promptPreview) : "";
-  const { id, receiverScore, judgeScore, source } = input ?? {};
+  const { id, receiverScore, judgeScore, source, tone, title } = input ?? {};
   if (typeof id !== "string" || !/^[A-Za-z0-9-]{8,100}$/.test(id)) return { error: "invalid id" };
   if (!displayName || displayName.length > 32) return { error: "displayName must be 1-32 characters" };
   if (!promptPreview) return { error: "promptPreview must be 1-280 characters" };
   if (!["codex", "claude"].includes(source)) return { error: "source must be codex or claude" };
+  if (!TONES.has(tone)) return { error: "invalid tone" };
+  if (!TITLES.has(title)) return { error: "invalid title" };
   if (![receiverScore, judgeScore].every((score) => Number.isInteger(score) && score >= 0 && score <= 100)) {
     return { error: "scores must be integers from 0 to 100" };
   }
-  return { value: { id, displayName, promptPreview, source, receiverScore, judgeScore,
+  return { value: { id, displayName, promptPreview, source, receiverScore, judgeScore, tone, title,
     score: Math.round((receiverScore + judgeScore) / 2) } };
 }
 
@@ -83,8 +96,7 @@ export default async function handler(request, response) {
       response.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
       const [rows, [{ count }]] = await Promise.all([
         sql`SELECT id, display_name AS "displayName", prompt_preview AS "promptPreview",
-                   source, receiver_score AS "receiverScore", judge_score AS "judgeScore",
-                   score, created_at AS "createdAt"
+                   source, score, tone, title, created_at AS "createdAt"
             FROM rankings ORDER BY score DESC, created_at ASC LIMIT ${limit} OFFSET ${offset}`,
         sql`SELECT count(*)::int AS count FROM rankings`,
       ]);
@@ -115,12 +127,12 @@ export default async function handler(request, response) {
 
     const entry = parsed.value;
     const rows = await sql`
-      INSERT INTO rankings (id, display_name, prompt_preview, source, receiver_score, judge_score, score, ip_hash)
+      INSERT INTO rankings (id, display_name, prompt_preview, source, receiver_score, judge_score, score, tone, title, ip_hash)
       VALUES (${entry.id}, ${entry.displayName}, ${entry.promptPreview}, ${entry.source},
-              ${entry.receiverScore}, ${entry.judgeScore}, ${entry.score}, ${ipHash})
+              ${entry.receiverScore}, ${entry.judgeScore}, ${entry.score}, ${entry.tone}, ${entry.title}, ${ipHash})
       ON CONFLICT (id) DO NOTHING
       RETURNING id, display_name AS "displayName", prompt_preview AS "promptPreview",
-                source, receiver_score AS "receiverScore", judge_score AS "judgeScore", score, created_at AS "createdAt"`;
+                source, score, tone, title, created_at AS "createdAt"`;
     if (!rows[0]) return response.status(409).json({ error: "Already submitted" });
     return response.status(201).json(rows[0]);
   } catch (error) {
