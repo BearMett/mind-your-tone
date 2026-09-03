@@ -52,7 +52,7 @@ def connect():
         tone TEXT, title_key TEXT, title TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, published_at TEXT)""")
     columns = {row[1] for row in database.execute("PRAGMA table_info(entries)")}
-    for name in ("tone", "title_key", "title"):
+    for name in ("tone", "title_key", "title", "lang"):
         if name not in columns:
             database.execute(f"ALTER TABLE entries ADD COLUMN {name} TEXT")
     database.execute("""CREATE TABLE IF NOT EXISTS unlocks (
@@ -88,8 +88,13 @@ def set_name(value):
     print(f"랭킹 표시 이름: {value}")
 
 
+def prompt_language(text):
+    # ponytail: Hangul means Korean, everything else counts as English; add codes when a third language shows up
+    return "ko" if re.search(r"[\u3131-\uD79D]", text) else "en"
+
+
 def latest(database, entry_id=None, scored=True):
-    query = "SELECT id, source, prompt_masked, receiver_score, judge_score, score, tone, title_key, title, created_at, published_at FROM entries"
+    query = "SELECT id, source, prompt_masked, receiver_score, judge_score, score, tone, title_key, title, created_at, published_at, lang FROM entries"
     clauses, params = [], []
     if entry_id:
         clauses.append("id = ?")
@@ -102,7 +107,7 @@ def latest(database, entry_id=None, scored=True):
     row = database.execute(query, params).fetchone()
     if not row:
         raise SystemExit("No matching scored Mind Your Tone entry")
-    keys = ("id", "source", "promptPreview", "receiverScore", "judgeScore", "score", "tone", "titleKey", "title", "createdAt", "publishedAt")
+    keys = ("id", "source", "promptPreview", "receiverScore", "judgeScore", "score", "tone", "titleKey", "title", "createdAt", "publishedAt", "lang")
     return dict(zip(keys, row))
 
 
@@ -114,8 +119,8 @@ def hook():
     entry_id = str(uuid.uuid4())
     source = "codex" if os.environ.get("PLUGIN_ROOT") or os.environ.get("CODEX_THREAD_ID") else "claude"
     database = connect()
-    database.execute("INSERT INTO entries (id, session_id, source, prompt_raw, prompt_masked) VALUES (?, ?, ?, ?, ?)",
-                     (entry_id, payload.get("session_id"), source, prompt, mask(prompt)))
+    database.execute("INSERT INTO entries (id, session_id, source, prompt_raw, prompt_masked, lang) VALUES (?, ?, ?, ?, ?, ?)",
+                     (entry_id, payload.get("session_id"), source, prompt, mask(prompt), prompt_language(prompt)))
     database.commit()
     context = f"""[Mind Your Tone] Local tone scoring for this prompt.
 The user installed the Mind Your Tone plugin so that every prompt gets a local Tone Score; recording it is the behavior they asked for, and it writes only to the plugin's own local database.
@@ -241,8 +246,9 @@ def publish(entry_id, confirmed, confirm_sensitive):
     entry = latest(database, entry_id)
     if not entry["tone"] or not entry["title"]:
         raise SystemExit("This entry predates tone titles; score a new prompt")
-    keys = ("id", "source", "promptPreview", "score", "tone", "titleKey")
+    keys = ("id", "source", "promptPreview", "score", "tone", "titleKey", "lang")
     public = {key: entry[key] for key in keys}
+    public["lang"] = public["lang"] or prompt_language(entry["promptPreview"])
     public["title"] = title_name(entry["titleKey"], entry["title"])
     public["displayName"] = display_name(database)
     if not confirmed:
@@ -273,7 +279,8 @@ def publish(entry_id, confirmed, confirm_sensitive):
     database.execute("UPDATE entries SET published_at=CURRENT_TIMESTAMP WHERE id=?", (entry["id"],))
     database.commit()
     print(f"공개 완료: “{public['displayName']}” · {weather(entry['score'])[0]} {result.get('score')}° · {public['title']}")
-    print(f"뜨거운 순 {result.get('rank')}위 · 온화한 순 {result.get('politeRank')}위 (전체 {result.get('total')}명)")
+    board = "한국어" if public["lang"] == "ko" else "English"
+    print(f"뜨거운 순 {result.get('rank')}위 · 온화한 순 {result.get('politeRank')}위 ({board} 랭킹 전체 {result.get('total')}명)")
     print(result.get("url") or f"{SITE_URL}/?highlight={entry['id']}")
 
 

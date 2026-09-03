@@ -39,7 +39,6 @@
       .source { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px; font-size: .7rem; font-weight: 700; vertical-align: 2px; text-transform: uppercase; }
       .source.claude { background: #fbe7de; color: #b4532e; }
       .source.codex { background: #e6e8ec; color: #1f2933; }
-      .source.lang-tag { background: transparent; border: 1px solid #c8dbe8; color: #597087; }
       .who { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #597087; font-size: .95rem; }
       .title { font-weight: 800; }
       .score { display: grid; justify-items: end; padding: 20px 26px; color: #0782c5; font-size: clamp(2rem, 7vw, 3.6rem); font-weight: 900; font-style: italic; letter-spacing: -.06em; line-height: 1; }
@@ -100,8 +99,6 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
           weather: ['🍃 Breeze', '🌤 Fair', '🌡 Warm', '🔥 Heatwave', '🌋 Eruption'],
         },
       };
-      // ponytail: script-based guess; add a stored language field if other scripts show up
-      const promptLanguage = (text) => (/[\u3131-\uD79D]/.test(text) ? 'ko' : /[A-Za-z]/.test(text) ? 'en' : '');
       const params = new URLSearchParams(location.search);
       const lang = params.get('lang') === 'en' || (!params.has('lang') && !navigator.language.startsWith('ko')) ? 'en' : 'ko';
       const t = STRINGS[lang];
@@ -133,7 +130,7 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
       }));
 
       try {
-        const query = new URLSearchParams({ order, page });
+        const query = new URLSearchParams({ order, page, lang });
         if (highlight) query.set('highlight', highlight);
         const response = await fetch(`/api/rankings?${query}`);
         if (!response.ok) throw new Error();
@@ -149,7 +146,6 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
             const detail = document.createElement('div');
             const prompt = document.createElement('div');
             const source = document.createElement('span');
-            const promptLang = document.createElement('span');
             const who = document.createElement('div');
             const title = document.createElement('span');
             const name = document.createElement('span');
@@ -166,11 +162,7 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
             source.className = `source ${entry.source}`;
             source.textContent = entry.source;
             prompt.className = 'prompt';
-            const detected = promptLanguage(entry.promptPreview);
-            promptLang.className = 'source lang-tag';
-            promptLang.textContent = detected;
-            if (detected) prompt.lang = detected;
-            prompt.append(source, detected ? promptLang : '', `“${entry.promptPreview}”`);
+            prompt.append(source, `“${entry.promptPreview}”`);
             who.className = 'who';
             title.className = 'title';
             title.textContent = data.titles[entry.titleKey]?.[lang] ?? entry.titleKey;

@@ -30,6 +30,7 @@ test("hook scores a courteous insult, unlocks titles, and names the user", () =>
     const preview = mcp(env, "publish", { entryId: id }).content[0].text;
     assert.match(preview, /"displayName": "Bear Mett"/);
     assert.match(preview, /"titleKey": "secret-formal-tyrant"/);
+    assert.match(preview, /"lang": "ko"/);
     assert.match(hook.hookSpecificOutput.additionalContext, /addressed to Mind Your Tone .* do not score/);
   } finally {
     rmSync(home, { recursive: true });
@@ -45,6 +46,10 @@ test("polite low score nudges toward the manners board", () => {
     const result = run(env, ["score", id, "5", "5", "courteous"]);
     assert.match(result, /^Mind Your Tone · 🍃 5° · 매너 있는 동료/);
     assert.match(result, /“공유해줘”로 랭킹에/);
+    const english = JSON.parse(run(env, ["hook"], JSON.stringify({ prompt: "Could you add tests when you have a moment?" })));
+    const englishId = english.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)[0];
+    run(env, ["score", englishId, "5", "5", "courteous"]);
+    assert.match(mcp(env, "publish", { entryId: englishId }).content[0].text, /"lang": "en"/);
   } finally {
     rmSync(home, { recursive: true });
   }

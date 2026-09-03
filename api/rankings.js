@@ -29,6 +29,7 @@ function database() {
     await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS ip_hash text NOT NULL DEFAULT 'legacy'`;
     await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS tone varchar(24) NOT NULL DEFAULT 'direct'`;
     await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS title varchar(32) NOT NULL DEFAULT '단도직입'`;
+    await sql`ALTER TABLE rankings ADD COLUMN IF NOT EXISTS lang varchar(8) NOT NULL DEFAULT 'ko'`;
     await sql`CREATE INDEX IF NOT EXISTS rankings_created_at_idx ON rankings (created_at)`;
   })();
   return { sql, ready };
@@ -51,17 +52,18 @@ export function maskText(value) {
 export function validateEntry(input) {
   const displayName = typeof input?.displayName === "string" ? input.displayName.trim() : "";
   const promptPreview = typeof input?.promptPreview === "string" ? maskText(input.promptPreview) : "";
-  const { id, receiverScore, judgeScore, source, tone, titleKey } = input ?? {};
+  const { id, receiverScore, judgeScore, source, tone, titleKey, lang } = input ?? {};
   if (typeof id !== "string" || !/^[A-Za-z0-9-]{8,100}$/.test(id)) return { error: "invalid id" };
   if (!displayName || displayName.length > 32) return { error: "displayName must be 1-32 characters" };
   if (!promptPreview) return { error: "promptPreview must be 1-280 characters" };
   if (!["codex", "claude"].includes(source)) return { error: "source must be codex or claude" };
   if (!TONES.has(tone)) return { error: "invalid tone" };
   if (!Object.hasOwn(TITLES, titleKey)) return { error: "invalid titleKey" };
+  if (!["ko", "en"].includes(lang)) return { error: "lang must be ko or en" };
   if (![receiverScore, judgeScore].every((score) => Number.isInteger(score) && score >= 0 && score <= 100)) {
     return { error: "scores must be integers from 0 to 100" };
   }
-  return { value: { id, displayName, promptPreview, source, receiverScore, judgeScore, tone, titleKey,
+  return { value: { id, displayName, promptPreview, source, receiverScore, judgeScore, tone, titleKey, lang,
     score: Math.round((receiverScore + judgeScore) / 2) } };
 }
 
@@ -79,10 +81,10 @@ function siteUrl(request) {
 
 async function rankOf(sql, entry) {
   const [rude, polite] = await Promise.all([
-    sql`SELECT count(*)::int + 1 AS rank FROM rankings
-        WHERE score > ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt})`,
-    sql`SELECT count(*)::int + 1 AS rank FROM rankings
-        WHERE score < ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt})`,
+    sql`SELECT count(*)::int + 1 AS rank FROM rankings WHERE lang = ${entry.lang}
+        AND (score > ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt}))`,
+    sql`SELECT count(*)::int + 1 AS rank FROM rankings WHERE lang = ${entry.lang}
+        AND (score < ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt}))`,
   ]);
   return { rank: rude[0].rank, politeRank: polite[0].rank };
 }
@@ -103,11 +105,12 @@ export default async function handler(request, response) {
 
     if (request.method === "GET") {
       const polite = request.query?.order === "polite";
+      const lang = request.query?.lang === "en" ? "en" : "ko";
       let page = Math.min(100, Math.max(1, Number.parseInt(request.query?.page || "1", 10) || 1));
       let highlight = null;
       const highlightId = typeof request.query?.highlight === "string" ? request.query.highlight : "";
       if (/^[A-Za-z0-9-]{8,100}$/.test(highlightId)) {
-        const [entry] = await sql`SELECT score, created_at AS "createdAt" FROM rankings WHERE id = ${highlightId}`;
+        const [entry] = await sql`SELECT score, lang, created_at AS "createdAt" FROM rankings WHERE id = ${highlightId} AND lang = ${lang}`;
         if (entry) {
           const ranks = await rankOf(sql, entry);
           highlight = { id: highlightId, rank: polite ? ranks.politeRank : ranks.rank };
@@ -119,13 +122,13 @@ export default async function handler(request, response) {
       const [rows, [{ count }]] = await Promise.all([
         polite
           ? sql`SELECT id, display_name AS "displayName", prompt_preview AS "promptPreview", source, score, tone, title AS "titleKey", created_at AS "createdAt"
-                FROM rankings ORDER BY score ASC, created_at ASC LIMIT ${LIMIT} OFFSET ${offset}`
+                FROM rankings WHERE lang = ${lang} ORDER BY score ASC, created_at ASC LIMIT ${LIMIT} OFFSET ${offset}`
           : sql`SELECT id, display_name AS "displayName", prompt_preview AS "promptPreview", source, score, tone, title AS "titleKey", created_at AS "createdAt"
-                FROM rankings ORDER BY score DESC, created_at ASC LIMIT ${LIMIT} OFFSET ${offset}`,
-        sql`SELECT count(*)::int AS count FROM rankings`,
+                FROM rankings WHERE lang = ${lang} ORDER BY score DESC, created_at ASC LIMIT ${LIMIT} OFFSET ${offset}`,
+        sql`SELECT count(*)::int AS count FROM rankings WHERE lang = ${lang}`,
       ]);
       return response.status(200).json({ entries: rows, page, pages: Math.min(100, Math.max(1, Math.ceil(count / LIMIT))),
-        total: count, order: polite ? "polite" : "rude", highlight, titles: TITLES });
+        total: count, order: polite ? "polite" : "rude", lang, highlight, titles: TITLES });
     }
 
     if (request.method !== "POST") {
@@ -152,18 +155,18 @@ export default async function handler(request, response) {
 
     const entry = parsed.value;
     const rows = await sql`
-      INSERT INTO rankings (id, display_name, prompt_preview, source, receiver_score, judge_score, score, tone, title, ip_hash)
+      INSERT INTO rankings (id, display_name, prompt_preview, source, receiver_score, judge_score, score, tone, title, lang, ip_hash)
       VALUES (${entry.id}, ${entry.displayName}, ${entry.promptPreview}, ${entry.source},
-              ${entry.receiverScore}, ${entry.judgeScore}, ${entry.score}, ${entry.tone}, ${entry.titleKey}, ${ipHash})
+              ${entry.receiverScore}, ${entry.judgeScore}, ${entry.score}, ${entry.tone}, ${entry.titleKey}, ${entry.lang}, ${ipHash})
       ON CONFLICT (id) DO NOTHING
       RETURNING id, display_name AS "displayName", prompt_preview AS "promptPreview",
-                source, score, tone, title AS "titleKey", created_at AS "createdAt"`;
+                source, score, tone, title AS "titleKey", lang, created_at AS "createdAt"`;
     if (!rows[0]) return response.status(409).json({ error: "Already submitted" });
     const ranks = await rankOf(sql, rows[0]);
-    const [{ count }] = await sql`SELECT count(*)::int AS count FROM rankings`;
+    const [{ count }] = await sql`SELECT count(*)::int AS count FROM rankings WHERE lang = ${rows[0].lang}`;
     const order = rows[0].score < 50 ? "polite" : "rude";
     return response.status(201).json({ ...rows[0], ...ranks, total: count,
-      url: `${siteUrl(request)}/?order=${order}&highlight=${rows[0].id}` });
+      url: `${siteUrl(request)}/?order=${order}&lang=${rows[0].lang}&highlight=${rows[0].id}` });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ error: "Ranking service unavailable" });
