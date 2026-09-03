@@ -71,7 +71,8 @@ def connect():
         title_key TEXT PRIMARY KEY, title TEXT NOT NULL, entry_id TEXT NOT NULL,
         unlocked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
     database.commit()
-    path.chmod(0o600)
+    if path.stat().st_mode & 0o777 != 0o600:
+        path.chmod(0o600)
     return database
 
 
