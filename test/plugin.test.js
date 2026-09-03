@@ -16,6 +16,7 @@ test("hook scores a courteous insult and unlocks fixed titles", () => {
     });
     const output = JSON.parse(hook);
     assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+    assert.match(output.hookSpecificOutput.additionalContext, /MIND_YOUR_TONE_HOME=/);
     const id = output.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)?.[0];
     assert.ok(id);
     const result = execFileSync(script, ["score", id, "95", "95", "courteous"], { env, encoding: "utf8" });
