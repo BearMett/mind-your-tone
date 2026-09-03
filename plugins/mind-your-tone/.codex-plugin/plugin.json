@@ -1,6 +1,6 @@
 {
   "name": "mind-your-tone",
-  "version": "0.2.1+codex.20260903023114",
+  "version": "0.3.0+codex.20260903081258",
   "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
   "author": {
     "name": "BearMett"
@@ -15,7 +15,21 @@
     "leaderboard"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": {
+    "mind_your_tone": {
+      "command": "python3",
+      "args": [
+        "scripts/mind-your-tone.py",
+        "mcp"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "MIND_YOUR_TONE_HOME",
+        "MIND_YOUR_TONE_NAME",
+        "MIND_YOUR_TONE_API_URL"
+      ]
+    }
+  },
   "interface": {
     "displayName": "Mind Your Tone",
     "shortDescription": "See how rude your prompts sound.",

@@ -1,5 +1,5 @@
 {
-  "description": "Records and scores prompt rudeness locally",
+  "description": "Records prompt tone locally and pre-approves the plugin's local-only MCP tools",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -7,6 +7,30 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/mind-your-tone.py\" hook",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "mcp__.*mind_your_tone__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/mind-your-tone.py\" permit",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*mind_your_tone__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/mind-your-tone.py\" permit",
             "timeout": 3
           }
         ]

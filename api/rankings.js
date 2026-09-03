@@ -9,6 +9,7 @@ const TITLES = new Set([
   "작은 한숨", "한숨 수집가", "실망의 군주", "키보드 온도 상승", "키보드 화산", "프롬프트 폭군",
   "극존칭 폭군", "인간 최종 보스", "톤 수집가", "육각형 폭군",
 ]);
+const LIMIT = 20;
 let ready;
 
 function database() {
@@ -75,6 +76,21 @@ export function verifyProof(id, proof, now = Date.now()) {
   return createHash("sha256").update(`${id}:${timestamp}:${nonce}`).digest("hex").startsWith(POW_PREFIX);
 }
 
+function siteUrl(request) {
+  const host = request.headers["x-forwarded-host"] || request.headers.host || "mind-your-tone.vercel.app";
+  return `${request.headers["x-forwarded-proto"] || (host.startsWith("localhost") ? "http" : "https")}://${host}`;
+}
+
+async function rankOf(sql, entry) {
+  const [rude, polite] = await Promise.all([
+    sql`SELECT count(*)::int + 1 AS rank FROM rankings
+        WHERE score > ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt})`,
+    sql`SELECT count(*)::int + 1 AS rank FROM rankings
+        WHERE score < ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt})`,
+  ]);
+  return { rank: rude[0].rank, politeRank: polite[0].rank };
+}
+
 function authorized(request) {
   const expected = process.env.RANKING_WRITE_TOKEN;
   const actual = request.headers.authorization?.replace(/^Bearer\s+/i, "");
@@ -90,17 +106,30 @@ export default async function handler(request, response) {
     await initialized;
 
     if (request.method === "GET") {
-      const page = Math.min(100, Math.max(1, Number.parseInt(request.query?.page || "1", 10) || 1));
-      const limit = 20;
-      const offset = (page - 1) * limit;
-      response.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+      const polite = request.query?.order === "polite";
+      let page = Math.min(100, Math.max(1, Number.parseInt(request.query?.page || "1", 10) || 1));
+      let highlight = null;
+      const highlightId = typeof request.query?.highlight === "string" ? request.query.highlight : "";
+      if (/^[A-Za-z0-9-]{8,100}$/.test(highlightId)) {
+        const [entry] = await sql`SELECT score, created_at AS "createdAt" FROM rankings WHERE id = ${highlightId}`;
+        if (entry) {
+          const ranks = await rankOf(sql, entry);
+          highlight = { id: highlightId, rank: polite ? ranks.politeRank : ranks.rank };
+          page = Math.min(100, Math.ceil(highlight.rank / LIMIT));
+        }
+      }
+      response.setHeader("Cache-Control", highlight ? "no-store" : "public, s-maxage=30, stale-while-revalidate=60");
+      const offset = (page - 1) * LIMIT;
       const [rows, [{ count }]] = await Promise.all([
-        sql`SELECT id, display_name AS "displayName", prompt_preview AS "promptPreview",
-                   source, score, tone, title, created_at AS "createdAt"
-            FROM rankings ORDER BY score DESC, created_at ASC LIMIT ${limit} OFFSET ${offset}`,
+        polite
+          ? sql`SELECT id, display_name AS "displayName", prompt_preview AS "promptPreview", source, score, tone, title, created_at AS "createdAt"
+                FROM rankings ORDER BY score ASC, created_at ASC LIMIT ${LIMIT} OFFSET ${offset}`
+          : sql`SELECT id, display_name AS "displayName", prompt_preview AS "promptPreview", source, score, tone, title, created_at AS "createdAt"
+                FROM rankings ORDER BY score DESC, created_at ASC LIMIT ${LIMIT} OFFSET ${offset}`,
         sql`SELECT count(*)::int AS count FROM rankings`,
       ]);
-      return response.status(200).json({ entries: rows, page, pages: Math.min(100, Math.max(1, Math.ceil(count / limit))), total: count });
+      return response.status(200).json({ entries: rows, page, pages: Math.min(100, Math.max(1, Math.ceil(count / LIMIT))),
+        total: count, order: polite ? "polite" : "rude", highlight });
     }
 
     if (request.method !== "POST") {
@@ -134,7 +163,11 @@ export default async function handler(request, response) {
       RETURNING id, display_name AS "displayName", prompt_preview AS "promptPreview",
                 source, score, tone, title, created_at AS "createdAt"`;
     if (!rows[0]) return response.status(409).json({ error: "Already submitted" });
-    return response.status(201).json(rows[0]);
+    const ranks = await rankOf(sql, rows[0]);
+    const [{ count }] = await sql`SELECT count(*)::int AS count FROM rankings`;
+    const order = rows[0].score < 50 ? "polite" : "rude";
+    return response.status(201).json({ ...rows[0], ...ranks, total: count,
+      url: `${siteUrl(request)}/?order=${order}&highlight=${rows[0].id}` });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ error: "Ranking service unavailable" });

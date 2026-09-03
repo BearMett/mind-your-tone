@@ -1,11 +1,18 @@
 {
   "name": "mind-your-tone",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "displayName": "Mind Your Tone",
   "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
-  "author": { "name": "BearMett" },
+  "author": {
+    "name": "BearMett"
+  },
   "homepage": "https://mind-your-tone.vercel.app",
   "repository": "https://github.com/BearMett/mind-your-tone",
   "license": "MIT",
-  "keywords": ["prompt", "tone", "rudeness", "leaderboard"]
+  "keywords": [
+    "prompt",
+    "tone",
+    "rudeness",
+    "leaderboard"
+  ]
 }
