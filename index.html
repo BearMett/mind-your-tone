@@ -44,6 +44,8 @@
       nav a[aria-disabled="true"] { color: #a2afb8; pointer-events: none; }
       footer { margin-top: 40px; color: #718498; font-size: .9rem; text-align: center; }
       footer a { color: #087dbd; }
+      footer pre { overflow-x: auto; margin: 0 0 12px; padding: 12px 16px; background: #fff; border: 1px solid #d7e4ed; border-radius: 12px; font-size: .8rem; line-height: 1.5; text-align: left; color: #3d5062; }
+      footer p { margin: 0; }
       @media (max-width: 560px) {
         main { padding: 36px 0; }
         article { grid-template-columns: 52px 1fr auto; min-height: 88px; border-radius: 14px; }
@@ -62,7 +64,16 @@
       <div class="tabs" role="tablist" id="tabs"></div>
       <section id="ranking" aria-live="polite"><div class="empty">랭킹 불러오는 중…</div></section>
       <nav id="pagination" aria-label="랭킹 페이지"></nav>
-      <footer>아이디어: <a href="https://arxiv.org/abs/2510.04950">Mind Your Tone (Dobariya &amp; Kumar)</a> · 코드: <a href="https://github.com/BearMett/mind-your-tone">BearMett/mind-your-tone</a></footer>
+      <footer>
+        <pre># Claude Code
+claude plugin marketplace add BearMett/mind-your-tone
+claude plugin install mind-your-tone@mind-your-tone
+
+# Codex
+codex plugin marketplace add BearMett/mind-your-tone
+codex plugin add mind-your-tone@mind-your-tone</pre>
+        <p>사용법과 코드: <a href="https://github.com/BearMett/mind-your-tone">BearMett/mind-your-tone</a></p>
+      </footer>
     </main>
     <script type="module">
       const ranking = document.querySelector('#ranking');
