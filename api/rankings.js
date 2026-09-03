@@ -8,7 +8,7 @@ const TONES = new Set(["courteous", "direct", "impatient", "sarcastic", "disappo
 const LIMIT = 20;
 let ready;
 
-function database() {
+export function database() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not configured");
   const sql = neon(process.env.DATABASE_URL);
   ready ??= (async () => {
@@ -74,12 +74,12 @@ export function verifyProof(id, proof, now = Date.now()) {
   return createHash("sha256").update(`${id}:${timestamp}:${nonce}`).digest("hex").startsWith(POW_PREFIX);
 }
 
-function siteUrl(request) {
+export function siteUrl(request) {
   const host = request.headers["x-forwarded-host"] || request.headers.host || "mind-your-tone.vercel.app";
   return `${request.headers["x-forwarded-proto"] || (host.startsWith("localhost") ? "http" : "https")}://${host}`;
 }
 
-async function rankOf(sql, entry) {
+export async function rankOf(sql, entry) {
   const [rude, polite] = await Promise.all([
     sql`SELECT count(*)::int + 1 AS rank FROM rankings WHERE lang = ${entry.lang}
         AND (score > ${entry.score} OR (score = ${entry.score} AND created_at < ${entry.createdAt}))`,
@@ -166,7 +166,7 @@ export default async function handler(request, response) {
     const [{ count }] = await sql`SELECT count(*)::int AS count FROM rankings WHERE lang = ${rows[0].lang}`;
     const order = rows[0].score < 50 ? "polite" : "rude";
     return response.status(201).json({ ...rows[0], ...ranks, total: count,
-      url: `${siteUrl(request)}/?order=${order}&lang=${rows[0].lang}&highlight=${rows[0].id}` });
+      url: `${siteUrl(request)}/s/${rows[0].id}` });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ error: "Ranking service unavailable" });

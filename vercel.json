@@ -1,5 +1,19 @@
 {
   "functions": {
-    "api/rankings.js": { "includeFiles": "plugins/mind-your-tone/titles.json" }
-  }
+    "api/rankings.js": {
+      "includeFiles": "plugins/mind-your-tone/titles.json"
+    },
+    "api/og.js": {
+      "includeFiles": "plugins/mind-your-tone/titles.json"
+    },
+    "api/share.js": {
+      "includeFiles": "plugins/mind-your-tone/titles.json"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/s/:id",
+      "destination": "/api/share?id=:id"
+    }
+  ]
 }

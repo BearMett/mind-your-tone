@@ -192,20 +192,17 @@ def score(entry_id, receiver, judge, tone):
         secrets.append("tone-collector")
     if tone_count == len(TONES):
         secrets.append("hexagon-tyrant")
-    new_secret = None
-    for secret in secrets:
-        if unlock(database, f"secret-{secret}", title_name(f"secret-{secret}"), entry_id, unlocked):
-            new_secret = secret
-    if new_secret:
-        title_key = f"secret-{new_secret}"
-        title = title_name(title_key)
-        database.execute("UPDATE entries SET title_key=?, title=? WHERE id=?", (title_key, title, entry_id))
+    # secrets are unlock badges only; the entry keeps the tone title that describes this prompt
+    new_secrets = [title_name(f"secret-{secret}") for secret in secrets
+                   if unlock(database, f"secret-{secret}", title_name(f"secret-{secret}"), entry_id, unlocked)]
     database.commit()
 
     lowest = database.execute("SELECT min(score) FROM entries WHERE id != ? AND score IS NOT NULL", (entry_id,)).fetchone()[0]
     new_high = value >= 60 and (previous is None or value > previous)
     new_low = value <= 20 and (lowest is None or value < lowest)
     line = f"Mind Your Tone · {weather(value)[0]} {value}° · {title}"
+    if new_secrets:
+        line += " · 새 호칭: " + ", ".join(new_secrets)
     if unlocked or new_high or new_low:
         line += " · “공유해줘”로 랭킹에 올릴 수 있어요"
     print(line)

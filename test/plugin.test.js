@@ -22,14 +22,14 @@ test("hook scores a courteous insult, unlocks titles, and names the user", () =>
     const id = hook.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)?.[0];
     assert.ok(id);
     const result = mcp(env, "score", { entryId: id, receiver: 95, judge: 95, tone: "courteous" }).content[0].text;
-    assert.match(result, /^Mind Your Tone · 🌋 95° · 극존칭 폭군/);
+    assert.match(result, /^Mind Your Tone · 🌋 95° · 존댓말 암살자 · 새 호칭: 극존칭 폭군/);
     assert.equal(result.split("\n").length, 1);
     assert.match(result, /“공유해줘”로 랭킹에/);
     assert.match(run(env, ["collection"]), /극존칭 폭군/);
     assert.match(mcp(env, "set_name", { name: "  Bear  Mett " }).content[0].text, /Bear Mett/);
     const preview = mcp(env, "publish", { entryId: id }).content[0].text;
     assert.match(preview, /"displayName": "Bear Mett"/);
-    assert.match(preview, /"titleKey": "secret-formal-tyrant"/);
+    assert.match(preview, /"titleKey": "courteous-3"/);
     assert.match(preview, /"lang": "ko"/);
     assert.match(hook.hookSpecificOutput.additionalContext, /addressed to Mind Your Tone .* do not score/);
   } finally {

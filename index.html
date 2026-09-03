@@ -41,6 +41,8 @@
       .source.codex { background: #e6e8ec; color: #1f2933; }
       .who { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #597087; font-size: .95rem; }
       .title { font-weight: 800; }
+      .share { margin-left: auto; padding: 4px 12px; border: 1px solid #c8dbe8; border-radius: 999px; background: #fff; color: #327399; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+      .share:hover { border-color: #087dbd; color: #087dbd; }
       .score { display: grid; justify-items: end; padding: 20px 26px; color: #0782c5; font-size: clamp(2rem, 7vw, 3.6rem); font-weight: 900; font-style: italic; letter-spacing: -.06em; line-height: 1; }
       .band { font-size: .85rem; font-style: normal; letter-spacing: 0; }
       .empty { padding: 64px 24px; text-align: center; color: #718498; background: #fff9; border: 1px dashed #bfd0dc; border-radius: 18px; }
@@ -89,13 +91,15 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
         ko: {
           tagline: '우리가 함께 일하는 방법', loading: '랭킹 불러오는 중…', failed: '랭킹을 불러오지 못했습니다.',
           rude: '🔥 뜨거운 순', polite: '🍃 온화한 순', emptyRude: '아직 등록된 폭염이 없습니다.', emptyPolite: '아직 등록된 산들바람이 없습니다.',
-          previous: '이전', next: '다음', footer: '사용법과 코드:',
+          previous: '이전', next: '다음', footer: '사용법과 코드:', share: '공유', copied: '복사됨',
+          rank: (label, n) => `${label} ${n}위`,
           weather: ['🍃 산들바람', '🌤 쾌적', '🌡 후끈', '🔥 폭염', '🌋 분화'],
         },
         en: {
           tagline: 'How we work together', loading: 'Loading rankings…', failed: 'Could not load the rankings.',
           rude: '🔥 Hottest', polite: '🍃 Mildest', emptyRude: 'No heatwaves yet.', emptyPolite: 'No breezes yet.',
-          previous: 'Previous', next: 'Next', footer: 'Usage and code:',
+          previous: 'Previous', next: 'Next', footer: 'Usage and code:', share: 'Share', copied: 'Copied',
+          rank: (label, n) => `${label} #${n}`,
           weather: ['🍃 Breeze', '🌤 Fair', '🌡 Warm', '🔥 Heatwave', '🌋 Eruption'],
         },
       };
@@ -149,6 +153,7 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
             const who = document.createElement('div');
             const title = document.createElement('span');
             const name = document.createElement('span');
+            const share = document.createElement('button');
             const score = document.createElement('div');
             const band = document.createElement('span');
 
@@ -157,7 +162,8 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
             article.classList.add(`w${heat}`);
             if (entry.id === highlight) article.classList.add('highlight');
             rank.className = 'rank';
-            rank.textContent = (data.page - 1) * 20 + index + 1;
+            const position = (data.page - 1) * 20 + index + 1;
+            rank.textContent = position;
             detail.className = 'entry';
             source.className = `source ${entry.source}`;
             source.textContent = entry.source;
@@ -167,7 +173,22 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
             title.className = 'title';
             title.textContent = data.titles[entry.titleKey]?.[lang] ?? entry.titleKey;
             name.textContent = entry.displayName;
-            who.append(title, '·', name);
+            share.type = 'button';
+            share.className = 'share';
+            share.textContent = t.share;
+            share.addEventListener('click', async () => {
+              const text = `${t.weather[heat]} ${entry.score}° · ${title.textContent} · ${t.rank(t[order], position)}`;
+              const url = `${location.origin}/s/${entry.id}`;
+              try {
+                if (navigator.share) await navigator.share({ title: 'Mind Your Tone', text, url });
+                else {
+                  await navigator.clipboard.writeText(`${text}\n${url}`);
+                  share.textContent = t.copied;
+                  setTimeout(() => { share.textContent = t.share; }, 1500);
+                }
+              } catch {}
+            });
+            who.append(title, '·', name, share);
             score.className = 'score';
             band.className = 'band';
             band.textContent = t.weather[heat];
