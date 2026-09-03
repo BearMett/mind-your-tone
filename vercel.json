@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/rankings.js": { "includeFiles": "plugins/mind-your-tone/titles.json" }
+  }
+}
