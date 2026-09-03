@@ -22,7 +22,7 @@ test("hook scores a courteous insult, unlocks titles, and names the user", () =>
     const id = hook.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)?.[0];
     assert.ok(id);
     const result = mcp(env, "score", { entryId: id, receiver: 95, judge: 95, tone: "courteous" }).content[0].text;
-    assert.match(result, /^🌋 톤 온도 95° · 극존칭 폭군/);
+    assert.match(result, /^Mind Your Tone · 🌋 95° · 극존칭 폭군/);
     assert.equal(result.split("\n").length, 1);
     assert.match(result, /“공유해줘”로 랭킹에/);
     assert.match(run(env, ["collection"]), /극존칭 폭군/);
@@ -41,7 +41,7 @@ test("polite low score nudges toward the manners board", () => {
     const hook = JSON.parse(run(env, ["hook"], JSON.stringify({ prompt: "시간 되실 때 테스트 추가 부탁드려요." })));
     const id = hook.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)[0];
     const result = run(env, ["score", id, "5", "5", "courteous"]);
-    assert.match(result, /^🍃 톤 온도 5° · 매너 있는 동료/);
+    assert.match(result, /^Mind Your Tone · 🍃 5° · 매너 있는 동료/);
     assert.match(result, /“공유해줘”로 랭킹에/);
   } finally {
     rmSync(home, { recursive: true });

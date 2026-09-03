@@ -205,7 +205,7 @@ def score(entry_id, receiver, judge, tone):
     lowest = database.execute("SELECT min(score) FROM entries WHERE id != ? AND score IS NOT NULL", (entry_id,)).fetchone()[0]
     new_high = value >= 60 and (previous is None or value > previous)
     new_low = value <= 20 and (lowest is None or value < lowest)
-    line = f"{weather(value)[0]} 톤 온도 {value}° · {title}"
+    line = f"Mind Your Tone · {weather(value)[0]} {value}° · {title}"
     if unlocked or new_high or new_low:
         line += " · “공유해줘”로 랭킹에 올릴 수 있어요"
     print(line)
@@ -272,7 +272,7 @@ def publish(entry_id, confirmed, confirm_sensitive):
         raise SystemExit(f"Publish failed ({error.code}): {error.read().decode()}") from error
     database.execute("UPDATE entries SET published_at=CURRENT_TIMESTAMP WHERE id=?", (entry["id"],))
     database.commit()
-    print(f"공개 완료: “{public['displayName']}” · {weather(entry['score'])[0]} 톤 온도 {result.get('score')}° · {result.get('title')}")
+    print(f"공개 완료: “{public['displayName']}” · {weather(entry['score'])[0]} {result.get('score')}° · {result.get('title')}")
     print(f"뜨거운 순 {result.get('rank')}위 · 온화한 순 {result.get('politeRank')}위 (전체 {result.get('total')}명)")
     print(result.get("url") or f"{SITE_URL}/?highlight={entry['id']}")
 
