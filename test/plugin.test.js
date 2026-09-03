@@ -14,7 +14,9 @@ test("hook scores a courteous insult and unlocks fixed titles", () => {
     const hook = execFileSync("python3", [script, "hook"], {
       env, input: JSON.stringify({ prompt: "정말 대단하시네요. 다시 제대로 해주시겠어요?", session_id: "test" }), encoding: "utf8",
     });
-    const id = hook.match(/[0-9a-f-]{36}/)?.[0];
+    const output = JSON.parse(hook);
+    assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+    const id = output.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)?.[0];
     assert.ok(id);
     const result = execFileSync(script, ["score", id, "95", "95", "courteous"], { env, encoding: "utf8" });
     assert.match(result, /Tone Score — 95 · 극존칭 폭군/);
