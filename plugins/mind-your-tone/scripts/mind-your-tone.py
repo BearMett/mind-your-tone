@@ -16,20 +16,9 @@ import uuid
 from pathlib import Path
 
 API_URL = "https://mind-your-tone.vercel.app/api/rankings"
-TITLES = {
-    "courteous": ("매너 있는 동료", "정중한 독설가", "존댓말 암살자"),
-    "direct": ("단도직입", "명령문 장인", "군더더기 파괴자"),
-    "impatient": ("조금 급한 사람", "마감의 지배자", "당장 대령하라"),
-    "sarcastic": ("은근한 한마디", "칭찬인 줄 알았지?", "비꼼의 대가"),
-    "disappointed": ("작은 한숨", "한숨 수집가", "실망의 군주"),
-    "explosive": ("키보드 온도 상승", "키보드 화산", "프롬프트 폭군"),
-}
-SECRETS = {
-    "formal-tyrant": "극존칭 폭군",
-    "final-boss": "인간 최종 보스",
-    "tone-collector": "톤 수집가",
-    "hexagon-tyrant": "육각형 폭군",
-}
+TONES = ("courteous", "direct", "impatient", "sarcastic", "disappointed", "explosive")
+with open(str(Path(__file__).resolve().parent.parent / "titles.json"), encoding="utf-8") as titles_file:
+    TITLE_NAMES = json.load(titles_file)  # single source of title keys and names, shared with the API and the site
 SENSITIVE_MARKERS = ("[SECRET]", "[EMAIL]", "[IP]", "[HOME]")
 ADJECTIVES = ("졸린", "성난", "느긋한", "수줍은", "집요한", "엄격한", "다정한", "시니컬한", "부지런한", "야심찬", "무심한", "예민한")
 NOUNS = ("수달", "너구리", "고슴도치", "펭귄", "두더지", "문어", "사막여우", "카피바라", "알파카", "매", "해마", "도마뱀")
@@ -155,11 +144,16 @@ def weather(value):
     return WEATHER[min(4, value // 20)]
 
 
+def title_name(key, fallback=None):
+    return TITLE_NAMES[key]["ko"] if key in TITLE_NAMES else fallback
+
+
 def base_title(tone, value):
-    if tone not in TITLES:
-        raise SystemExit("Tone must be one of: " + ", ".join(TITLES))
+    if tone not in TONES:
+        raise SystemExit("Tone must be one of: " + ", ".join(TONES))
     tier = 0 if value < 40 else 1 if value < 70 else 2
-    return f"{tone}-{tier + 1}", TITLES[tone][tier]
+    key = f"{tone}-{tier + 1}"
+    return key, title_name(key)
 
 
 def unlock(database, title_key, title, entry_id, unlocked):
@@ -191,14 +185,15 @@ def score(entry_id, receiver, judge, tone):
     tone_count = database.execute("SELECT count(DISTINCT tone) FROM entries WHERE score IS NOT NULL").fetchone()[0]
     if tone_count >= 3:
         secrets.append("tone-collector")
-    if tone_count == len(TITLES):
+    if tone_count == len(TONES):
         secrets.append("hexagon-tyrant")
     new_secret = None
     for secret in secrets:
-        if unlock(database, f"secret-{secret}", SECRETS[secret], entry_id, unlocked):
+        if unlock(database, f"secret-{secret}", title_name(f"secret-{secret}"), entry_id, unlocked):
             new_secret = secret
     if new_secret:
-        title_key, title = f"secret-{new_secret}", SECRETS[new_secret]
+        title_key = f"secret-{new_secret}"
+        title = title_name(title_key)
         database.execute("UPDATE entries SET title_key=?, title=? WHERE id=?", (title_key, title, entry_id))
     database.commit()
 
@@ -214,19 +209,23 @@ def score(entry_id, receiver, judge, tone):
 def show(entry_id=None, history=False):
     database = connect()
     if history:
-        rows = database.execute("SELECT id, source, prompt_masked, score, tone, title, created_at, published_at FROM entries WHERE score IS NOT NULL ORDER BY created_at DESC, rowid DESC LIMIT 20")
-        keys = ("id", "source", "promptPreview", "score", "tone", "title", "createdAt", "publishedAt")
-        print(json.dumps([dict(zip(keys, row)) for row in rows], ensure_ascii=False, indent=2))
+        rows = database.execute("SELECT id, source, prompt_masked, score, tone, title_key, title, created_at, published_at FROM entries WHERE score IS NOT NULL ORDER BY created_at DESC, rowid DESC LIMIT 20")
+        keys = ("id", "source", "promptPreview", "score", "tone", "titleKey", "title", "createdAt", "publishedAt")
+        entries = [dict(zip(keys, row)) for row in rows]
+        for entry in entries:
+            entry["title"] = title_name(entry.pop("titleKey"), entry["title"])
+        print(json.dumps(entries, ensure_ascii=False, indent=2))
     else:
         entry = latest(database, entry_id)
+        entry["title"] = title_name(entry["titleKey"], entry["title"])
         for key in ("receiverScore", "judgeScore", "titleKey"):
             entry.pop(key)
         print(json.dumps(entry, ensure_ascii=False, indent=2))
 
 
 def collection():
-    rows = connect().execute("SELECT title, unlocked_at FROM unlocks ORDER BY unlocked_at, rowid")
-    print(json.dumps([{"title": row[0], "unlockedAt": row[1]} for row in rows], ensure_ascii=False, indent=2))
+    rows = connect().execute("SELECT title_key, title, unlocked_at FROM unlocks ORDER BY unlocked_at, rowid")
+    print(json.dumps([{"title": title_name(row[0], row[1]), "unlockedAt": row[2]} for row in rows], ensure_ascii=False, indent=2))
 
 
 def proof(entry_id):
@@ -242,8 +241,9 @@ def publish(entry_id, confirmed, confirm_sensitive):
     entry = latest(database, entry_id)
     if not entry["tone"] or not entry["title"]:
         raise SystemExit("This entry predates tone titles; score a new prompt")
-    keys = ("id", "source", "promptPreview", "score", "tone", "title")
+    keys = ("id", "source", "promptPreview", "score", "tone", "titleKey")
     public = {key: entry[key] for key in keys}
+    public["title"] = title_name(entry["titleKey"], entry["title"])
     public["displayName"] = display_name(database)
     if not confirmed:
         print(json.dumps(public, ensure_ascii=False, indent=2))
@@ -272,7 +272,7 @@ def publish(entry_id, confirmed, confirm_sensitive):
         raise SystemExit(f"Publish failed ({error.code}): {error.read().decode()}") from error
     database.execute("UPDATE entries SET published_at=CURRENT_TIMESTAMP WHERE id=?", (entry["id"],))
     database.commit()
-    print(f"공개 완료: “{public['displayName']}” · {weather(entry['score'])[0]} {result.get('score')}° · {result.get('title')}")
+    print(f"공개 완료: “{public['displayName']}” · {weather(entry['score'])[0]} {result.get('score')}° · {public['title']}")
     print(f"뜨거운 순 {result.get('rank')}위 · 온화한 순 {result.get('politeRank')}위 (전체 {result.get('total')}명)")
     print(result.get("url") or f"{SITE_URL}/?highlight={entry['id']}")
 
@@ -296,7 +296,7 @@ TOOLS = [
     {"name": "score", "description": "Save two private rudeness judgments and return only the combined Tone Score.",
      "inputSchema": {"type": "object", "properties": {
          "entryId": {"type": "string"}, "receiver": {"type": "integer", "minimum": 0, "maximum": 100},
-         "judge": {"type": "integer", "minimum": 0, "maximum": 100}, "tone": {"type": "string", "enum": list(TITLES)}},
+         "judge": {"type": "integer", "minimum": 0, "maximum": 100}, "tone": {"type": "string", "enum": list(TONES)}},
          "required": ["entryId", "receiver", "judge", "tone"], "additionalProperties": False}},
     {"name": "preview", "description": "Show the latest scored prompt with private component scores omitted.",
      "inputSchema": {"type": "object", "properties": {"entryId": {"type": "string"}}, "additionalProperties": False},
@@ -379,7 +379,7 @@ def main():
     scoring.add_argument("id")
     scoring.add_argument("receiver", type=int)
     scoring.add_argument("judge", type=int)
-    scoring.add_argument("tone", choices=TITLES)
+    scoring.add_argument("tone", choices=TONES)
     preview = commands.add_parser("preview")
     preview.add_argument("id", nargs="?")
     commands.add_parser("history")

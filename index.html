@@ -18,9 +18,12 @@
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #fff 0, #eaf4fb 42rem); }
       main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0; }
-      header { margin-bottom: 24px; }
+      header { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 24px; }
       h1 { margin: 0 0 10px; font-size: clamp(2rem, 7vw, 4.5rem); letter-spacing: -.07em; }
       header p { margin: 0; color: #597087; font-size: 1.05rem; }
+      .lang { flex: none; color: #597087; font-size: .85rem; }
+      .lang a { color: #087dbd; text-decoration: none; }
+      .lang a[aria-current="page"] { color: #18202b; font-weight: 700; }
       .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
       .tabs a { padding: 9px 16px; color: #327399; text-decoration: none; background: #fff; border: 1px solid #c8dbe8; border-radius: 999px; font-weight: 700; }
       .tabs a[aria-current="page"] { color: #fff; background: #087dbd; border-color: #087dbd; }
@@ -32,10 +35,13 @@
       article .rank { background: var(--heat, #087dbd); }
       article .title, article .score { color: var(--heat, #0782c5); }
       .entry { min-width: 0; padding: 18px 22px; }
-      .name { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; font-weight: 800; }
-      .source { padding: 3px 8px; border-radius: 999px; background: #e9f3f9; color: #327399; font-size: .72rem; text-transform: uppercase; }
-      .title { margin-bottom: 7px; color: #0782c5; font-weight: 800; }
-      .prompt { display: -webkit-box; overflow: hidden; color: #526271; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+      .prompt { display: -webkit-box; overflow: hidden; margin-bottom: 10px; color: #18202b; font-size: 1.05rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+      .source { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px; font-size: .7rem; font-weight: 700; vertical-align: 2px; text-transform: uppercase; }
+      .source.claude { background: #fbe7de; color: #b4532e; }
+      .source.codex { background: #e6e8ec; color: #1f2933; }
+      .source.lang-tag { background: transparent; border: 1px solid #c8dbe8; color: #597087; }
+      .who { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #597087; font-size: .95rem; }
+      .title { font-weight: 800; }
       .score { display: grid; justify-items: end; padding: 20px 26px; color: #0782c5; font-size: clamp(2rem, 7vw, 3.6rem); font-weight: 900; font-style: italic; letter-spacing: -.06em; line-height: 1; }
       .band { font-size: .85rem; font-style: normal; letter-spacing: 0; }
       .empty { padding: 64px 24px; text-align: center; color: #718498; background: #fff9; border: 1px dashed #bfd0dc; border-radius: 18px; }
@@ -48,6 +54,7 @@
       footer p { margin: 0; }
       @media (max-width: 560px) {
         main { padding: 36px 0; }
+        header { display: block; }
         article { grid-template-columns: 52px 1fr auto; min-height: 88px; border-radius: 14px; }
         .rank { font-size: 1.1rem; }
         .entry { padding: 14px; }
@@ -58,12 +65,15 @@
   <body>
     <main>
       <header>
-        <h1>Mind Your Tone</h1>
-        <p>우리가 함께 일하는 방법</p>
+        <div>
+          <h1>Mind Your Tone</h1>
+          <p id="tagline"></p>
+        </div>
+        <div class="lang" id="lang"></div>
       </header>
       <div class="tabs" role="tablist" id="tabs"></div>
-      <section id="ranking" aria-live="polite"><div class="empty">랭킹 불러오는 중…</div></section>
-      <nav id="pagination" aria-label="랭킹 페이지"></nav>
+      <section id="ranking" aria-live="polite"><div class="empty" id="loading"></div></section>
+      <nav id="pagination" aria-label="ranking pages"></nav>
       <footer>
         <pre># Claude Code
 claude plugin marketplace add BearMett/mind-your-tone
@@ -72,24 +82,52 @@ claude plugin install mind-your-tone@mind-your-tone
 # Codex
 codex plugin marketplace add BearMett/mind-your-tone
 codex plugin add mind-your-tone@mind-your-tone</pre>
-        <p>사용법과 코드: <a href="https://github.com/BearMett/mind-your-tone">BearMett/mind-your-tone</a></p>
+        <p><span id="footer-label"></span> <a href="https://github.com/BearMett/mind-your-tone">BearMett/mind-your-tone</a></p>
       </footer>
     </main>
     <script type="module">
-      const ranking = document.querySelector('#ranking');
-      const pagination = document.querySelector('#pagination');
+      const STRINGS = {
+        ko: {
+          tagline: '우리가 함께 일하는 방법', loading: '랭킹 불러오는 중…', failed: '랭킹을 불러오지 못했습니다.',
+          rude: '🔥 뜨거운 순', polite: '🍃 온화한 순', emptyRude: '아직 등록된 폭염이 없습니다.', emptyPolite: '아직 등록된 산들바람이 없습니다.',
+          previous: '이전', next: '다음', footer: '사용법과 코드:',
+          weather: ['🍃 산들바람', '🌤 쾌적', '🌡 후끈', '🔥 폭염', '🌋 분화'],
+        },
+        en: {
+          tagline: 'How we work together', loading: 'Loading rankings…', failed: 'Could not load the rankings.',
+          rude: '🔥 Hottest', polite: '🍃 Mildest', emptyRude: 'No heatwaves yet.', emptyPolite: 'No breezes yet.',
+          previous: 'Previous', next: 'Next', footer: 'Usage and code:',
+          weather: ['🍃 Breeze', '🌤 Fair', '🌡 Warm', '🔥 Heatwave', '🌋 Eruption'],
+        },
+      };
+      // ponytail: script-based guess; add a stored language field if other scripts show up
+      const promptLanguage = (text) => (/[\u3131-\uD79D]/.test(text) ? 'ko' : /[A-Za-z]/.test(text) ? 'en' : '');
       const params = new URLSearchParams(location.search);
+      const lang = params.get('lang') === 'en' || (!params.has('lang') && !navigator.language.startsWith('ko')) ? 'en' : 'ko';
+      const t = STRINGS[lang];
+      document.documentElement.lang = lang;
       const polite = params.get('order') === 'polite';
       const order = polite ? 'polite' : 'rude';
       const highlight = params.get('highlight') || '';
       const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1);
-      const link = (p) => `?order=${order}&page=${p}`;
+      const link = (extra) => `?${new URLSearchParams({ order, lang, ...extra })}`;
+      const ranking = document.querySelector('#ranking');
+      const pagination = document.querySelector('#pagination');
 
-      const WEATHER = [['🍃', '산들바람'], ['🌤', '쾌적'], ['🌡', '후끈'], ['🔥', '폭염'], ['🌋', '분화']];
-      document.querySelector('#tabs').replaceChildren(...[['rude', '🔥 뜨거운 순'], ['polite', '🍃 온화한 순']].map(([key, label]) => {
+      document.querySelector('#tagline').textContent = t.tagline;
+      document.querySelector('#loading').textContent = t.loading;
+      document.querySelector('#footer-label').textContent = t.footer;
+      document.querySelector('#lang').replaceChildren(...[['ko', '한국어'], ['en', 'English']].flatMap(([key, label], i) => {
         const a = document.createElement('a');
-        a.href = `?order=${key}`;
+        a.href = `?${new URLSearchParams({ order, lang: key, page })}`;
         a.textContent = label;
+        if (key === lang) a.setAttribute('aria-current', 'page');
+        return i ? [' · ', a] : [a];
+      }));
+      document.querySelector('#tabs').replaceChildren(...['rude', 'polite'].map((key) => {
+        const a = document.createElement('a');
+        a.href = `?${new URLSearchParams({ order: key, lang })}`;
+        a.textContent = t[key];
         if (key === order) a.setAttribute('aria-current', 'page');
         return a;
       }));
@@ -103,40 +141,46 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
         const entries = data.entries;
 
         if (!entries.length) {
-          ranking.innerHTML = `<div class="empty">${polite ? '아직 등록된 산들바람이 없습니다.' : '아직 등록된 폭염이 없습니다.'}</div>`;
+          ranking.innerHTML = `<div class="empty">${polite ? t.emptyPolite : t.emptyRude}</div>`;
         } else {
           ranking.replaceChildren(...entries.map((entry, index) => {
             const article = document.createElement('article');
             const rank = document.createElement('div');
             const detail = document.createElement('div');
-            const name = document.createElement('div');
-            const title = document.createElement('div');
             const prompt = document.createElement('div');
-            const score = document.createElement('div');
             const source = document.createElement('span');
+            const promptLang = document.createElement('span');
+            const who = document.createElement('div');
+            const title = document.createElement('span');
+            const name = document.createElement('span');
+            const score = document.createElement('div');
+            const band = document.createElement('span');
 
-            const band = Math.min(4, Math.floor(entry.score / 20));
+            const heat = Math.min(4, Math.floor(entry.score / 20));
             article.id = `entry-${entry.id}`;
-            article.classList.add(`w${band}`);
+            article.classList.add(`w${heat}`);
             if (entry.id === highlight) article.classList.add('highlight');
             rank.className = 'rank';
             rank.textContent = (data.page - 1) * 20 + index + 1;
             detail.className = 'entry';
-            name.className = 'name';
-            name.textContent = entry.displayName;
-            source.className = 'source';
+            source.className = `source ${entry.source}`;
             source.textContent = entry.source;
-            title.className = 'title';
-            title.textContent = entry.title;
             prompt.className = 'prompt';
-            prompt.textContent = `“${entry.promptPreview}”`;
+            const detected = promptLanguage(entry.promptPreview);
+            promptLang.className = 'source lang-tag';
+            promptLang.textContent = detected;
+            if (detected) prompt.lang = detected;
+            prompt.append(source, detected ? promptLang : '', `“${entry.promptPreview}”`);
+            who.className = 'who';
+            title.className = 'title';
+            title.textContent = data.titles[entry.titleKey]?.[lang] ?? entry.titleKey;
+            name.textContent = entry.displayName;
+            who.append(title, '·', name);
             score.className = 'score';
-            const label = document.createElement('span');
-            label.className = 'band';
-            label.textContent = WEATHER[band].join(' ');
-            score.append(`${entry.score}°`, label);
-            name.append(source);
-            detail.append(name, title, prompt);
+            band.className = 'band';
+            band.textContent = t.weather[heat];
+            score.append(`${entry.score}°`, band);
+            detail.append(prompt, who);
             article.append(rank, detail, score);
             return article;
           }));
@@ -147,17 +191,17 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
           const previous = document.createElement('a');
           const status = document.createElement('span');
           const next = document.createElement('a');
-          previous.textContent = '이전';
-          previous.href = link(data.page - 1);
+          previous.textContent = t.previous;
+          previous.href = link({ page: data.page - 1 });
           previous.setAttribute('aria-disabled', data.page === 1);
           status.textContent = `${data.page} / ${data.pages}`;
-          next.textContent = '다음';
-          next.href = link(data.page + 1);
+          next.textContent = t.next;
+          next.href = link({ page: data.page + 1 });
           next.setAttribute('aria-disabled', data.page === data.pages);
           pagination.replaceChildren(previous, status, next);
         }
       } catch {
-        ranking.innerHTML = '<div class="empty">랭킹을 불러오지 못했습니다.</div>';
+        ranking.innerHTML = `<div class="empty">${t.failed}</div>`;
       }
     </script>
   </body>

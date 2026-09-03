@@ -2,11 +2,11 @@
 
 Codex와 Claude Code에서 프롬프트의 말투를 기록하고, 응답 끝에 톤 온도와 호칭을 보여주는 플러그인입니다.
 
-[랭킹 보기](https://mind-your-tone.vercel.app)
+[랭킹 보기](https://mind-your-tone.vercel.app) — 브라우저 언어에 따라 한국어 또는 영어로 표시되고 `?lang=en`으로 고정할 수 있습니다.
 
 ## 설치
 
-Python 3.6 이상이 `python3` 명령으로 실행되어야 합니다. 별도 패키지나 로그인은 필요 없습니다.
+Python 3.6 이상이 `python3` 명령으로 실행되어야 합니다.
 
 ### Claude Code
 
@@ -26,7 +26,7 @@ Codex를 다시 시작한 뒤 **Hooks need review**에서 훅을 신뢰해야 �
 
 ### 설치 확인
 
-Codex나 Claude Code를 다시 시작하고 아무 프롬프트나 보내세요. 답변 끝에 아래와 같은 문구가 붙으면 정상입니다.
+Codex나 Claude Code를 다시 시작하고 프롬프트를 보내면 답변에 아래 내용이 함께 나옵니다.
 
 ```text
 Mind Your Tone · 🔥 78° · 정중한 독설가 · “공유해줘”로 랭킹에 올릴 수 있어요
@@ -44,28 +44,13 @@ Mind Your Tone · 🔥 78° · 정중한 독설가 · “공유해줘”로 랭�
 - `이름 바꿔줘 ○○` — 랭킹 표시 이름 변경
 - `공유해줘` — 직전에 표시된 프롬프트와 점수를 공개 랭킹에 등록
 
-공유 전에는 데이터가 외부로 전송되지 않습니다. 로컬 기록은 `~/.mind-your-tone/mind-your-tone.sqlite3`에 저장되며, 공개 시 마스킹된 280자 프롬프트와 점수·톤·호칭·에이전트 종류·표시 이름만 제출됩니다.
+공유 전에는 데이터가 외부로 전송되지 않습니다. 로컬 기록은 `~/.mind-your-tone/mind-your-tone.sqlite3`에 저장되며, 공개 시 마스킹된 280자 프롬프트와 점수·톤·호칭 키·에이전트 종류·표시 이름만 제출됩니다.
+
+호칭은 [`plugins/mind-your-tone/titles.json`](plugins/mind-your-tone/titles.json)에 키와 한국어·영어 이름으로 정의됩니다. 스크립트, API, 랭킹 페이지가 모두 이 파일을 읽고 서버에는 키만 저장되므로, 이름을 바꾸면 이미 등록된 항목에도 반영됩니다.
 
 ## 참고
 
-이 프로젝트는 [*Mind Your Tone: Investigating How Prompt Politeness Affects LLM Accuracy*](https://arxiv.org/abs/2510.04950)에서 아이디어를 얻은 놀이형 기록장입니다. 점수는 클라이언트 에이전트가 생성하므로 신뢰 지표로 사용하지 마세요.
-
-## 로컬 개발
-
-```sh
-bun install
-bun test
-vercel dev
-```
-
-로컬 저장소를 마켓플레이스 소스로 추가할 수 있습니다. Codex는 설치본을 캐시에 복사하므로 플러그인 변경 후 `.codex-plugin/plugin.json`의 `version`을 올리고 다시 설치하세요.
-
-```sh
-claude plugin marketplace add /path/to/mind-your-tone
-codex plugin marketplace add /path/to/mind-your-tone
-```
-
-환경 변수는 [`.env.example`](.env.example)을 참고하세요. 로컬 API를 사용하려면 `MIND_YOUR_TONE_API_URL=http://localhost:3000/api/rankings`을 설정합니다.
+이 프로젝트는 [*Mind Your Tone: Investigating How Prompt Politeness Affects LLM Accuracy*](https://arxiv.org/abs/2510.04950)에서 아이디어를 얻은 순수 재미용입니다. 
 
 ## 라이선스
 

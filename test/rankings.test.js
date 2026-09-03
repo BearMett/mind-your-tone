@@ -6,7 +6,7 @@ import { maskText, validateEntry, verifyProof } from "../api/rankings.js";
 test("validates and scores a ranking entry", () => {
   const result = validateEntry({
     id: "turn-0001", displayName: "BearMett", promptPreview: "이것도 아직 안 됐어?",
-    source: "codex", receiverScore: 80, judgeScore: 65, tone: "impatient", title: "당장 대령하라",
+    source: "codex", receiverScore: 80, judgeScore: 65, tone: "impatient", titleKey: "impatient-3",
   });
   assert.equal(result.value.score, 73);
   assert.equal(result.value.displayName, "BearMett");
@@ -14,10 +14,11 @@ test("validates and scores a ranking entry", () => {
 
 test("rejects invalid scores and sources", () => {
   const base = { id: "turn-0001", displayName: "x", promptPreview: "x", receiverScore: 1, judgeScore: 1,
-    tone: "direct", title: "단도직입" };
+    tone: "direct", titleKey: "direct-1" };
   assert.match(validateEntry({ ...base, source: "other" }).error, /source/);
   assert.match(validateEntry({ ...base, source: "codex", receiverScore: 101 }).error, /scores/);
   assert.match(validateEntry({ ...base, source: "codex", tone: "mysterious" }).error, /tone/);
+  assert.match(validateEntry({ ...base, source: "codex", titleKey: "단도직입" }).error, /titleKey/);
 });
 
 test("masks sensitive text and verifies recent proof of work", () => {
