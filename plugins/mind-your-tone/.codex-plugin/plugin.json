@@ -1,6 +1,6 @@
 {
   "name": "mind-your-tone",
-  "version": "0.2.1+codex.20260903022832",
+  "version": "0.2.1+codex.20260903023114",
   "description": "Scores prompt tone, unlocks titles, and optionally publishes prompt cards.",
   "author": {
     "name": "BearMett"

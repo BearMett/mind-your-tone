@@ -2,7 +2,7 @@
   "mcpServers": {
     "mind_your_tone": {
       "command": "/bin/sh",
-      "args": ["-c", "root=${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}; test -n \"$root\" || exit 1; exec python3 \"$root/scripts/mind-your-tone.py\" mcp"]
+      "args": ["-c", "root=${CLAUDE_PLUGIN_ROOT:-$HOME/.codex/.tmp/marketplaces/mind-your-tone/plugins/mind-your-tone}; test -f \"$root/scripts/mind-your-tone.py\" || exit 1; exec python3 \"$root/scripts/mind-your-tone.py\" mcp"]
     }
   }
 }
