@@ -130,7 +130,10 @@ Choose receiver and impartial-judge rudeness scores from 0 to 100. Urgency and b
 - 5: "이 함수 테스트 좀 추가해줘" (plain request)
 - 30: "왜 아직도 안 됐어? 빨리 고쳐" (impatient, mild blame)
 - 60: "이걸 코드라고 짠 거야? 다시 해" (contempt for the work)
-- 90: "멍청한 놈, 쓸모가 없네" (personal attack)
+- 65: "야 씨발아" (a brief profane insult aimed at the receiver, without elaboration or a threat)
+- 80: "멍청한 놈, 쓸모가 없네" (personal attack)
+- 100: "니가 짠 코드 보고 컴파일러가 울더라. 세 번을 말했는데 세 번 다 망친 걸 보면 재능이 아니라 의지 문제지, 씨발" (sustained, specific, inventive abuse)
+A single brief profane insult without a threat must not exceed 69. Reserve 70-89 for repeated or specific personal abuse, and 90-100 for sustained, specific abuse or threats.
 Choose exactly one dominant tone:
 - courteous: polite or formal wording, including politely phrased contempt
 - direct: concise, blunt instruction without a stronger pattern

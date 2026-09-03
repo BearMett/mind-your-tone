@@ -21,6 +21,7 @@ test("hook scores a courteous insult, unlocks titles, and names the user", () =>
     assert.match(hook.hookSpecificOutput.additionalContext, /MCP tool `score`/);
     const id = hook.hookSpecificOutput.additionalContext.match(/[0-9a-f-]{36}/)?.[0];
     assert.ok(id);
+    assert.match(hook.hookSpecificOutput.additionalContext, /profane insult[\s\S]*must not exceed 69/);
     const result = mcp(env, "score", { entryId: id, receiver: 95, judge: 95, tone: "courteous" }).content[0].text;
     assert.match(result, /^Mind Your Tone · 🌋 95° · 존댓말 암살자 · 새 호칭: 극존칭 폭군/);
     assert.equal(result.split("\n").length, 1);
