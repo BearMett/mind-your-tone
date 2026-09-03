@@ -1,0 +1,11 @@
+{
+  "name": "mind-your-tone",
+  "version": "0.1.0",
+  "displayName": "Mind Your Tone",
+  "description": "Scores prompt rudeness locally and optionally publishes masked results.",
+  "author": { "name": "BearMett" },
+  "homepage": "https://mind-your-tone.vercel.app",
+  "repository": "https://github.com/BearMett/mind-your-tone",
+  "license": "MIT",
+  "keywords": ["prompt", "tone", "rudeness", "leaderboard"]
+}

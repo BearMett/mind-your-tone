@@ -1,0 +1,16 @@
+{
+  "description": "Records and scores prompt rudeness locally",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/mind-your-tone.py\" hook",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

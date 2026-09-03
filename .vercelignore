@@ -1,0 +1,6 @@
+.agents
+.claude-plugin
+plugins
+test
+*.md
+LICENSE

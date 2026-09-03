@@ -1,0 +1,12 @@
+{
+  "name": "mind-your-tone",
+  "description": "Prompt tone scoring for Codex and Claude Code.",
+  "owner": { "name": "BearMett" },
+  "plugins": [
+    {
+      "name": "mind-your-tone",
+      "source": "./plugins/mind-your-tone",
+      "description": "See how rude your Codex and Claude Code prompts sound."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "mind-your-tone",
+  "interface": {
+    "displayName": "Mind Your Tone"
+  },
+  "plugins": [
+    {
+      "name": "mind-your-tone",
+      "source": {
+        "source": "local",
+        "path": "./plugins/mind-your-tone"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
