@@ -1,6 +1,9 @@
 .agents
 .claude-plugin
-plugins
+plugins/*
+!plugins/mind-your-tone
+plugins/mind-your-tone/*
+!plugins/mind-your-tone/titles.json
 test
 *.md
 LICENSE
