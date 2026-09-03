@@ -21,13 +21,6 @@
       header { margin-bottom: 24px; }
       h1 { margin: 0 0 10px; font-size: clamp(2rem, 7vw, 4.5rem); letter-spacing: -.07em; }
       header p { margin: 0; color: #597087; font-size: 1.05rem; }
-      .intro { margin: 0 0 28px; padding: 18px 22px; background: #fff; border: 1px solid #d7e4ed; border-radius: 18px; color: #3d5062; line-height: 1.55; }
-      .intro p { margin: 0 0 10px; }
-      .intro p:last-child { margin: 0; }
-      .intro a { color: #087dbd; }
-      .intro details { margin-top: 10px; }
-      .intro summary { cursor: pointer; color: #087dbd; font-weight: 700; }
-      .intro pre { overflow-x: auto; margin: 10px 0 0; padding: 12px 14px; background: #f3f8fb; border-radius: 10px; font-size: .85rem; line-height: 1.5; }
       .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
       .tabs a { padding: 9px 16px; color: #327399; text-decoration: none; background: #fff; border: 1px solid #c8dbe8; border-radius: 999px; font-weight: 700; }
       .tabs a[aria-current="page"] { color: #fff; background: #087dbd; border-color: #087dbd; }
@@ -43,9 +36,8 @@
       .source { padding: 3px 8px; border-radius: 999px; background: #e9f3f9; color: #327399; font-size: .72rem; text-transform: uppercase; }
       .title { margin-bottom: 7px; color: #0782c5; font-weight: 800; }
       .prompt { display: -webkit-box; overflow: hidden; color: #526271; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-      .score { display: grid; justify-items: end; padding: 20px 26px; color: #0782c5; font-size: clamp(2rem, 7vw, 3.6rem); font-weight: 900; font-style: italic; letter-spacing: -.06em; }
-      .score::before { content: '톤 온도'; font-size: .65rem; font-style: normal; letter-spacing: .08em; }
-      .weather { margin-right: 8px; font-size: .5em; font-style: normal; vertical-align: middle; }
+      .score { display: grid; justify-items: end; padding: 20px 26px; color: #0782c5; font-size: clamp(2rem, 7vw, 3.6rem); font-weight: 900; font-style: italic; letter-spacing: -.06em; line-height: 1; }
+      .band { font-size: .85rem; font-style: normal; letter-spacing: 0; }
       .empty { padding: 64px 24px; text-align: center; color: #718498; background: #fff9; border: 1px dashed #bfd0dc; border-radius: 18px; }
       nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 24px; }
       nav a { padding: 9px 14px; color: #087dbd; text-decoration: none; background: #fff; border: 1px solid #c8dbe8; border-radius: 10px; }
@@ -67,21 +59,6 @@
         <h1>Mind Your Tone</h1>
         <p>우리가 함께 일하는 방법</p>
       </header>
-      <section class="intro">
-        <p>Codex와 Claude Code에 넣는 프롬프트의 말투를 에이전트가 톤 온도로 잽니다. 0°는 🍃 산들바람, 100°는 🌋 분화. 온도는 에이전트가 느낀 압박과 제3자가 본 무례함의 평균입니다.</p>
-        <p>플러그인을 설치하면 답변 끝에 톤 온도와 호칭이 붙고, “공유해줘” 한마디로 이 랭킹에 올라갑니다.</p>
-        <details>
-          <summary>설치하기 (Python 3 필요, 로그인 없음)</summary>
-<pre># Claude Code
-claude plugin marketplace add BearMett/mind-your-tone
-claude plugin install mind-your-tone@mind-your-tone
-
-# Codex
-codex plugin marketplace add BearMett/mind-your-tone
-codex plugin add mind-your-tone@mind-your-tone</pre>
-          <p style="margin-top:10px">자세한 사용법은 <a href="https://github.com/BearMett/mind-your-tone">GitHub</a>에 있습니다.</p>
-        </details>
-      </section>
       <div class="tabs" role="tablist" id="tabs"></div>
       <section id="ranking" aria-live="polite"><div class="empty">랭킹 불러오는 중…</div></section>
       <nav id="pagination" aria-label="랭킹 페이지"></nav>
@@ -97,7 +74,7 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
       const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1);
       const link = (p) => `?order=${order}&page=${p}`;
 
-      const WEATHER = ['🍃', '🌤', '🌡', '🔥', '🌋'];
+      const WEATHER = [['🍃', '산들바람'], ['🌤', '쾌적'], ['🌡', '후끈'], ['🔥', '폭염'], ['🌋', '분화']];
       document.querySelector('#tabs').replaceChildren(...[['rude', '🔥 뜨거운 순'], ['polite', '🍃 온화한 순']].map(([key, label]) => {
         const a = document.createElement('a');
         a.href = `?order=${key}`;
@@ -143,12 +120,10 @@ codex plugin add mind-your-tone@mind-your-tone</pre>
             prompt.className = 'prompt';
             prompt.textContent = `“${entry.promptPreview}”`;
             score.className = 'score';
-            const emoji = document.createElement('span');
-            emoji.className = 'weather';
-            emoji.textContent = WEATHER[band];
-            const value = document.createElement('span');
-            value.append(emoji, `${entry.score}°`);
-            score.append(value);
+            const label = document.createElement('span');
+            label.className = 'band';
+            label.textContent = WEATHER[band].join(' ');
+            score.append(`${entry.score}°`, label);
             name.append(source);
             detail.append(name, title, prompt);
             article.append(rank, detail, score);
