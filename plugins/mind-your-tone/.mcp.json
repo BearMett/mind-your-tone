@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "mind_your_tone": {
-      "command": "python3",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mind-your-tone.py", "mcp"]
+      "command": "/bin/sh",
+      "args": ["-c", "root=${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}; test -n \"$root\" || exit 1; exec python3 \"$root/scripts/mind-your-tone.py\" mcp"]
     }
   }
 }
